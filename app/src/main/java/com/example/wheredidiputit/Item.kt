@@ -15,5 +15,6 @@ data class Item(
     val category: String = "Other",
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
-    val isImportant: Boolean = false
+    val isImportant: Boolean = false,
+    val photoPath: String? = null
 )
