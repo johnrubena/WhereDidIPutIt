@@ -1451,6 +1451,8 @@ fun AddItemScreen(
         mutableStateOf("")
     }
 
+    var voiceTranscript by remember { mutableStateOf("") }
+
     var container by remember {
         mutableStateOf("")
     }
@@ -1467,6 +1469,7 @@ fun AddItemScreen(
         mutableStateOf(false)
     }
 
+
     val speechLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -1476,8 +1479,16 @@ fun AddItemScreen(
                 ?.firstOrNull()
 
             if (!spokenText.isNullOrBlank()) {
-                name = spokenText
+                voiceTranscript = spokenText
+
+                val parsedEntry = SmartVoiceParser.parse(spokenText)
+
+                name = parsedEntry.itemName
                 nameError = false
+
+                if (parsedEntry.location.isNotBlank()) {
+                    location = parsedEntry.location
+                }
             }
         }
     }
