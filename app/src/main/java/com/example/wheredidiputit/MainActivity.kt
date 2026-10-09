@@ -5,6 +5,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.rememberAsyncImagePainter
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import com.example.wheredidiputit.ui.theme.WhereDidIPutItTheme
@@ -47,65 +49,143 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var database: AppDatabase
 
+    /*
+     * Delete a photo only if no saved item uses it.
+     */
+    private suspend fun deletePhotoIfUnused(photoPath: String?) {
+
+        if (photoPath.isNullOrBlank()) {
+            return
+        }
+
+        val savedItems = database.itemDao().getAllItems()
+
+        val photoStillInUse = savedItems.any { item ->
+            item.photoPath == photoPath
+        }
+
+        if (!photoStillInUse) {
+            val photoFile = java.io.File(photoPath)
+
+            if (photoFile.exists()) {
+                photoFile.delete()
+            }
+        }
+    }
+
+
+    private var selectedPhotoUri by mutableStateOf<android.net.Uri?>(null)
+
+    private val pickItemPhoto =
+        registerForActivityResult(
+            ActivityResultContracts.PickVisualMedia()
+        ) { uri ->
+            if (uri != null) {
+                selectedPhotoUri = uri
+            }
+        }
+
+
     private val createBackupFile =
         registerForActivityResult(
-            ActivityResultContracts.CreateDocument("application/json")
+            ActivityResultContracts.CreateDocument("application/zip")
         ) { uri ->
-
             if (uri != null) {
                 lifecycleScope.launch {
+                    try {
+                        val backupItems = database.itemDao().getAllItems()
 
-                    val backupItems = database.itemDao().getAllItems()
-                    val backupJson = createBackupJson(backupItems)
+                        val outputStream =
+                            contentResolver.openOutputStream(uri)
 
-                    contentResolver.openOutputStream(uri)?.use { outputStream ->
-                        outputStream.write(backupJson.toByteArray())
+                        if (outputStream == null) {
+                            Toast.makeText(
+                                this@MainActivity,
+                                "Could not create the backup file.",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        } else {
+                            outputStream.use { stream ->
+                                BackupManager.createBackup(
+                                    context = this@MainActivity,
+                                    items = backupItems,
+                                    outputStream = stream
+                                )
+                            }
+
+                            Toast.makeText(
+                                this@MainActivity,
+                                "Backup created successfully!",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    } catch (e: Exception) {
+                        Toast.makeText(
+                            this@MainActivity,
+                            "Backup failed: ${e.message}",
+                            Toast.LENGTH_LONG
+                        ).show()
                     }
                 }
             }
         }
+
+
 
     private val restoreBackupFile =
         registerForActivityResult(
             ActivityResultContracts.OpenDocument()
         ) { uri ->
-
             if (uri != null) {
                 lifecycleScope.launch {
+                    try {
+                        val inputStream =
+                            contentResolver.openInputStream(uri)
 
-                    val json = contentResolver
-                        .openInputStream(uri)
-                        ?.bufferedReader()
-                        ?.use { it.readText() }
-
-                    if (json != null) {
-
-                        val restoredItems = restoreItemsFromJson(json)
-
-                        if (restoredItems.isNotEmpty()) {
-
-                            restoredItems.forEach { item ->
-                                database.itemDao().insertOrReplaceItem(item)
+                        if (inputStream == null) {
+                            Toast.makeText(
+                                this@MainActivity,
+                                "Could not open the backup file.",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        } else {
+                            val restoredItems = inputStream.use { stream ->
+                                BackupManager.restoreBackup(
+                                    context = this@MainActivity,
+                                    inputStream = stream
+                                )
                             }
 
-                            Toast.makeText(
-                                this@MainActivity,
-                                "${restoredItems.size} item(s) restored successfully.",
-                                Toast.LENGTH_LONG
-                            ).show()
+                            if (restoredItems.isNotEmpty()) {
+                                restoredItems.forEach { item ->
+                                    database.itemDao()
+                                        .insertOrReplaceItem(item)
+                                }
 
-                        } else {
-
-                            Toast.makeText(
-                                this@MainActivity,
-                                "No valid items were found in this backup file.",
-                                Toast.LENGTH_LONG
-                            ).show()
+                                Toast.makeText(
+                                    this@MainActivity,
+                                    "${restoredItems.size} item(s) restored successfully.",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            } else {
+                                Toast.makeText(
+                                    this@MainActivity,
+                                    "No valid items were found in the backup.",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
                         }
+                    } catch (e: Exception) {
+                        Toast.makeText(
+                            this@MainActivity,
+                            "Restore failed: ${e.message}",
+                            Toast.LENGTH_LONG
+                        ).show()
                     }
                 }
             }
         }
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -216,30 +296,79 @@ class MainActivity : ComponentActivity() {
 
                     } else if (currentScreen == "add") {
 
+
                         AddItemScreen(
                             modifier = Modifier.padding(innerPadding),
 
-                            onSave = { newItem ->
+                            onPickPhoto = {
+                                pickItemPhoto.launch(
+                                    PickVisualMediaRequest(
+                                        ActivityResultContracts.PickVisualMedia.ImageOnly
+                                    )
+                                )
+                            },
 
+                            photoUri = selectedPhotoUri,
+
+
+                            onSave = { newItem ->
                                 lifecycleScope.launch {
+                                    val savedPhotoPath = selectedPhotoUri?.let { uri ->
+                                        val photoDirectory = java.io.File(
+                                            filesDir,
+                                            "item_photos"
+                                        )
+
+                                        if (!photoDirectory.exists()) {
+                                            photoDirectory.mkdirs()
+                                        }
+
+                                        val mimeType = contentResolver.getType(uri)
+
+                                        val extension = when (mimeType) {
+                                            "image/png" -> ".png"
+                                            "image/webp" -> ".webp"
+                                            "image/gif" -> ".gif"
+                                            "image/heic" -> ".heic"
+                                            "image/heif" -> ".heif"
+                                            else -> ".jpg"
+                                        }
+
+                                        val photoFile = java.io.File(
+                                            photoDirectory,
+                                            "item_${System.currentTimeMillis()}$extension"
+                                        )
+
+                                        contentResolver.openInputStream(uri)?.use { input ->
+                                            photoFile.outputStream().use { output ->
+                                                input.copyTo(output)
+                                            }
+                                            photoFile.absolutePath
+                                        }
+                                    }
+
+                                    val itemToSave = newItem.copy(
+                                        photoPath = savedPhotoPath
+                                    )
 
                                     database
                                         .itemDao()
-                                        .insertItem(newItem)
+                                        .insertItem(itemToSave)
 
                                     items = database
                                         .itemDao()
                                         .getAllItems()
 
+                                    selectedPhotoUri = null
                                     currentScreen = "home"
                                 }
                             },
 
                             onCancel = {
-
                                 currentScreen = "home"
                             }
                         )
+
 
                     } else if (
                         currentScreen == "details" &&
@@ -276,20 +405,86 @@ class MainActivity : ComponentActivity() {
                             modifier = Modifier.padding(innerPadding),
                             item = selectedItem!!,
 
-                            onSave = { updatedItem ->
+                            photoUri = selectedPhotoUri,
+                            onPickPhoto = {
+                                pickItemPhoto.launch(
+                                    PickVisualMediaRequest(
+                                        ActivityResultContracts.PickVisualMedia.ImageOnly
+                                    )
+                                )
+                            },
 
+
+                            onSave = { updatedItem, replacementPhotoUri, shouldRemovePhoto ->
                                 lifecycleScope.launch {
+
+                                    val oldPhotoPath = updatedItem.photoPath
+
+                                    val finalPhotoPath = when {
+                                        shouldRemovePhoto -> null
+
+                                        replacementPhotoUri != null -> {
+                                            val photoDirectory = java.io.File(
+                                                filesDir,
+                                                "item_photos"
+                                            )
+
+                                            if (!photoDirectory.exists()) {
+                                                photoDirectory.mkdirs()
+                                            }
+
+                                            val mimeType =
+                                                contentResolver.getType(replacementPhotoUri)
+
+                                            val extension = when (mimeType) {
+                                                "image/png" -> ".png"
+                                                "image/webp" -> ".webp"
+                                                "image/gif" -> ".gif"
+                                                "image/heic" -> ".heic"
+                                                "image/heif" -> ".heif"
+                                                else -> ".jpg"
+                                            }
+
+                                            val photoFile = java.io.File(
+                                                photoDirectory,
+                                                "item_${System.currentTimeMillis()}$extension"
+                                            )
+
+                                            contentResolver
+                                                .openInputStream(replacementPhotoUri)
+                                                ?.use { input ->
+                                                    photoFile.outputStream().use { output ->
+                                                        input.copyTo(output)
+                                                    }
+                                                    photoFile.absolutePath
+                                                } ?: updatedItem.photoPath
+                                        }
+
+                                        else -> updatedItem.photoPath
+                                    }
+
+                                    val itemToUpdate = updatedItem.copy(
+                                        photoPath = finalPhotoPath
+                                    )
 
                                     database
                                         .itemDao()
-                                        .updateItem(updatedItem)
+                                        .updateItem(itemToUpdate)
+
+                                    if (replacementPhotoUri != null && oldPhotoPath != finalPhotoPath) {
+                                        deletePhotoIfUnused(oldPhotoPath)
+                                    }
+
+                                    if (shouldRemovePhoto) {
+                                        deletePhotoIfUnused(oldPhotoPath)
+                                    }
 
                                     items = database
                                         .itemDao()
                                         .getAllItems()
 
-                                    selectedItem = updatedItem
-
+                                    selectedItem = itemToUpdate
+                                    selectedPhotoUri = null
                                     currentScreen = "details"
                                 }
                             },
@@ -308,7 +503,7 @@ class MainActivity : ComponentActivity() {
                                 currentScreen = "home"
                             },
                             onBackup = {
-                                createBackupFile.launch("where_did_i_put_it_backup.json")
+                                createBackupFile.launch("where_did_i_put_it_backup.zip")
                             },
                             onRestore = {
                                 showRestoreDialog = true
@@ -351,9 +546,13 @@ class MainActivity : ComponentActivity() {
 
                                         lifecycleScope.launch {
 
+                                            val photoPathToDelete = item.photoPath
+
                                             database
                                                 .itemDao()
                                                 .deleteItem(item)
+
+                                            deletePhotoIfUnused(photoPathToDelete)
 
                                             items = database
                                                 .itemDao()
@@ -406,7 +605,7 @@ class MainActivity : ComponentActivity() {
                                     showRestoreDialog = false
 
                                     restoreBackupFile.launch(
-                                        arrayOf("application/json")
+                                        arrayOf("application/zip", "application/octet-stream")
                                     )
                                 }
                             ) {
@@ -480,82 +679,6 @@ fun formatUpdatedDate(timestamp: Long): String {
     return formatter.format(Date(timestamp))
 }
 
-fun createBackupJson(items: List<Item>): String {
-    val jsonItems = items.joinToString(
-        separator = ",",
-        prefix = "[",
-        postfix = "]"
-    ) { item ->
-
-        """
-        {
-            "id": ${item.id},
-            "name": "${item.name.replace("\"", "\\\"")}",
-            "location": "${item.location.replace("\"", "\\\"")}",
-            "specificPlace": "${item.specificPlace.replace("\"", "\\\"")}",
-            "container": "${item.container.replace("\"", "\\\"")}",
-            "notes": "${item.notes.replace("\"", "\\\"")}",
-            "category": "${item.category.replace("\"", "\\\"")}",
-            "createdAt": ${item.createdAt},
-            "updatedAt": ${item.updatedAt},
-            "isImportant": ${item.isImportant}
-        }
-        """.trimIndent()
-    }
-
-    return """
-        {
-            "items": $jsonItems
-        }
-    """.trimIndent()
-}
-
-fun restoreItemsFromJson(json: String): List<Item> {
-
-    if (json.isBlank()) {
-        return emptyList()
-    }
-
-    val items = mutableListOf<Item>()
-
-    val itemPattern = Regex(
-        """\{
-\s*"id":\s*(\d+),
-\s*"name":\s*"(.*?)",
-\s*"location":\s*"(.*?)",
-\s*"specificPlace":\s*"(.*?)",
-\s*"container":\s*"(.*?)",
-\s*"notes":\s*"(.*?)",
-\s*"category":\s*"(.*?)",
-\s*"createdAt":\s*(\d+),
-\s*"updatedAt":\s*(\d+),
-\s*"isImportant":\s*(true|false)
-\s*\}""",
-        RegexOption.DOT_MATCHES_ALL
-    )
-
-    itemPattern.findAll(json).forEach { match ->
-
-        val values = match.destructured
-
-        items.add(
-            Item(
-                id = values.component1().toInt(),
-                name = values.component2(),
-                location = values.component3(),
-                specificPlace = values.component4(),
-                container = values.component5(),
-                notes = values.component6(),
-                category = values.component7(),
-                createdAt = values.component8().toLong(),
-                updatedAt = values.component9().toLong(),
-                isImportant = values.component10().toBoolean()
-            )
-        )
-    }
-
-    return items
-}
 /*
  * ------------------------------------------------------------
  * HOME SCREEN
@@ -1087,9 +1210,31 @@ fun HomeScreen(
                     }
                 ) {
 
-                    Column(
-                        modifier = Modifier.padding(18.dp)
+                    Row(
+                        modifier = Modifier.padding(12.dp)
                     ) {
+
+                        // ITEM PHOTO THUMBNAIL
+                        if (!item.photoPath.isNullOrBlank()) {
+
+                            androidx.compose.foundation.Image(
+                                painter = rememberAsyncImagePainter(item.photoPath),
+                                contentDescription = "Photo of ${item.name}",
+                                modifier = Modifier
+                                    .height(90.dp)
+                                    .fillMaxWidth(0.28f),
+                                contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                            )
+
+                            Spacer(
+                                modifier = Modifier.padding(horizontal = 6.dp)
+                            )
+                        }
+
+                        // ITEM INFORMATION
+                        Column(
+                            modifier = Modifier.weight(1f)
+                        ) {
 
                         /*
                          * ITEM NAME
@@ -1217,12 +1362,13 @@ fun HomeScreen(
                         /*
                          * VIEW DETAILS
                          */
-                        Text(
-                            text = "VIEW DETAILS  →",
-                            fontSize = 15.sp
-                        )
-                    }
-                }
+                            Text(
+                                text = "VIEW DETAILS  →",
+                                fontSize = 15.sp
+                            )
+                        } // Closes item information Column
+                    } // Closes Row
+                } // Closes Card
             }
         }
 
@@ -1269,12 +1415,17 @@ fun HomeScreen(
 @Composable
 fun AddItemScreen(
     modifier: Modifier = Modifier,
+    onPickPhoto: () -> Unit,
+    photoUri: android.net.Uri?,
     onSave: (Item) -> Unit,
     onCancel: () -> Unit
 ) {
 
     var isImportant by remember {
         mutableStateOf(false)
+    }
+    var selectedPhotoUri by remember {
+        mutableStateOf<android.net.Uri?>(null)
     }
     var name by remember {
         mutableStateOf("")
@@ -1344,12 +1495,40 @@ fun AddItemScreen(
 
         Spacer(modifier = Modifier.height(12.dp))
 
+
         Text(
             text = "Add a few details below so you can find this item quickly later.",
             fontSize = 14.sp
         )
 
         Spacer(modifier = Modifier.height(20.dp))
+
+        // CHOOSE ITEM PHOTO
+        // CHOOSE ITEM PHOTO
+        Button(
+            onClick = onPickPhoto,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("📷 CHOOSE ITEM PHOTO")
+        }
+
+
+        if (photoUri != null) {
+            Spacer(modifier = Modifier.height(12.dp))
+
+            androidx.compose.foundation.Image(
+                painter = rememberAsyncImagePainter(photoUri),
+                contentDescription = "Selected item photo",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(220.dp),
+                contentScale = androidx.compose.ui.layout.ContentScale.Fit
+            )
+        }
+
+
+        Spacer(modifier = Modifier.height(16.dp))
+
 
         /*
          * ITEM NAME
@@ -1657,6 +1836,27 @@ fun ItemDetailsScreen(
             fontSize = 24.sp
         )
 
+
+        if (!item.photoPath.isNullOrBlank()) {
+            Spacer(
+                modifier = Modifier.height(16.dp)
+            )
+
+            androidx.compose.foundation.Image(
+                painter = rememberAsyncImagePainter(item.photoPath),
+                contentDescription = "Photo of ${item.name}",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(240.dp),
+                contentScale = androidx.compose.ui.layout.ContentScale.Fit
+            )
+
+            Spacer(
+                modifier = Modifier.height(16.dp)
+            )
+        }
+
+
         if (item.isImportant) {
 
             Spacer(
@@ -1866,13 +2066,29 @@ fun ItemDetailsScreen(
 fun EditItemScreen(
     modifier: Modifier = Modifier,
     item: Item,
-    onSave: (Item) -> Unit,
+    photoUri: android.net.Uri?,
+    onPickPhoto: () -> Unit,
+    onSave: (Item, android.net.Uri?, Boolean) -> Unit,
     onCancel: () -> Unit
 ) {
 
     var name by remember(item.id) {
         mutableStateOf(item.name)
     }
+
+
+    var editedPhotoPath by remember(item.id) {
+        mutableStateOf(item.photoPath)
+    }
+
+    var newPhotoUri by remember(item.id) {
+        mutableStateOf<android.net.Uri?>(null)
+    }
+
+    var removePhoto by remember(item.id) {
+        mutableStateOf(false)
+    }
+
 
     var location by remember(item.id) {
         mutableStateOf(item.location)
@@ -1940,6 +2156,61 @@ fun EditItemScreen(
             text = "Update the information for this item.",
             fontSize = 15.sp
         )
+
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "Item Photo",
+            fontSize = 18.sp
+        )
+
+        if (!removePhoto && photoUri == null && !editedPhotoPath.isNullOrBlank()) {
+            androidx.compose.foundation.Image(
+                painter = rememberAsyncImagePainter(editedPhotoPath),
+                contentDescription = "Current photo of ${item.name}",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp),
+                contentScale = androidx.compose.ui.layout.ContentScale.Fit
+            )
+        }
+
+        if (!removePhoto && photoUri != null) {
+            androidx.compose.foundation.Image(
+                painter = rememberAsyncImagePainter(photoUri),
+                contentDescription = "Replacement photo of ${item.name}",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp),
+                contentScale = androidx.compose.ui.layout.ContentScale.Fit
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Button(
+            onClick = {
+                removePhoto = false
+                onPickPhoto()
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("CHOOSE OR REPLACE PHOTO")
+        }
+
+        if (!editedPhotoPath.isNullOrBlank() || photoUri != null) {
+            Button(
+                onClick = {
+                    removePhoto = true
+                    editedPhotoPath = null
+                    newPhotoUri = null
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("REMOVE PHOTO")
+            }
+        }
 
         Spacer(
             modifier = Modifier.height(16.dp)
@@ -2134,6 +2405,7 @@ fun EditItemScreen(
 
                 } else {
 
+
                     val updatedItem = item.copy(
                         name = name.trim(),
                         location = location.trim(),
@@ -2142,10 +2414,16 @@ fun EditItemScreen(
                         notes = notes.trim(),
                         category = category,
                         isImportant = isImportant,
+                        photoPath = when {
+                            removePhoto -> null
+                            photoUri != null -> item.photoPath
+                            else -> editedPhotoPath
+                        },
                         updatedAt = System.currentTimeMillis()
                     )
 
-                    onSave(updatedItem)
+
+                    onSave(updatedItem, photoUri, removePhoto)
                 }
             },
             modifier = Modifier.fillMaxWidth()
