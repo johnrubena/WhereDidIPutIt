@@ -1,9 +1,19 @@
 package com.example.wheredidiputit
 
+
+
+
+
+
+
 import android.os.Bundle
 import android.widget.Toast
+import android.content.Intent
+import android.app.Activity
+import android.speech.RecognizerIntent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -1421,6 +1431,8 @@ fun AddItemScreen(
     onCancel: () -> Unit
 ) {
 
+    val context = androidx.compose.ui.platform.LocalContext.current
+
     var isImportant by remember {
         mutableStateOf(false)
     }
@@ -1453,6 +1465,21 @@ fun AddItemScreen(
 
     var nameError by remember {
         mutableStateOf(false)
+    }
+
+    val speechLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val spokenText = result.data
+                ?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+                ?.firstOrNull()
+
+            if (!spokenText.isNullOrBlank()) {
+                name = spokenText
+                nameError = false
+            }
+        }
     }
 
     var categoryExpanded by remember {
@@ -1528,6 +1555,39 @@ fun AddItemScreen(
 
 
         Spacer(modifier = Modifier.height(16.dp))
+
+
+        Button(
+            onClick = {
+                val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                    putExtra(
+                        RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                        RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
+                    )
+                    putExtra(
+                        RecognizerIntent.EXTRA_LANGUAGE,
+                        Locale.getDefault().toLanguageTag()
+                    )
+                    putExtra(
+                        RecognizerIntent.EXTRA_PROMPT,
+                        "Say the name of your item"
+                    )
+                }
+
+                try {
+                    speechLauncher.launch(intent)
+                } catch (e: android.content.ActivityNotFoundException) {
+                    android.widget.Toast.makeText(
+                        context,
+                        "Speech recognition is not available on this device.",
+                        android.widget.Toast.LENGTH_LONG
+                    ).show()
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("🎤 ENTER ITEM BY VOICE")
+        }
 
 
         /*
