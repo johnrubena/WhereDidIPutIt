@@ -1,5 +1,5 @@
 
-package com.example.wheredidiputit
+package com.jrwanitech.wheredidiputit
 
 data class ParsedVoiceEntry(
     val itemName: String,

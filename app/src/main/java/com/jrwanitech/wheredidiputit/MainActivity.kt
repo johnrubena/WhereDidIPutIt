@@ -1,15 +1,11 @@
-package com.example.wheredidiputit
-
-
-
-
-
-
+package com.jrwanitech.wheredidiputit
 
 import android.os.Bundle
 import android.widget.Toast
 import android.content.Intent
 import android.app.Activity
+import android.content.ActivityNotFoundException
+import android.net.Uri
 import android.speech.RecognizerIntent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -17,6 +13,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -44,12 +41,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.rememberAsyncImagePainter
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
-import com.example.wheredidiputit.ui.theme.WhereDidIPutItTheme
+import com.jrwanitech.wheredidiputit.ui.theme.WhereDidIPutItTheme
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -75,7 +75,7 @@ class MainActivity : ComponentActivity() {
         }
 
         if (!photoStillInUse) {
-            val photoFile = java.io.File(photoPath)
+            val photoFile = File(photoPath)
 
             if (photoFile.exists()) {
                 photoFile.delete()
@@ -84,7 +84,7 @@ class MainActivity : ComponentActivity() {
     }
 
 
-    private var selectedPhotoUri by mutableStateOf<android.net.Uri?>(null)
+    private var selectedPhotoUri by mutableStateOf<Uri?>(null)
 
     private val pickItemPhoto =
         registerForActivityResult(
@@ -324,7 +324,7 @@ class MainActivity : ComponentActivity() {
                             onSave = { newItem ->
                                 lifecycleScope.launch {
                                     val savedPhotoPath = selectedPhotoUri?.let { uri ->
-                                        val photoDirectory = java.io.File(
+                                        val photoDirectory = File(
                                             filesDir,
                                             "item_photos"
                                         )
@@ -344,7 +344,7 @@ class MainActivity : ComponentActivity() {
                                             else -> ".jpg"
                                         }
 
-                                        val photoFile = java.io.File(
+                                        val photoFile = File(
                                             photoDirectory,
                                             "item_${System.currentTimeMillis()}$extension"
                                         )
@@ -434,7 +434,7 @@ class MainActivity : ComponentActivity() {
                                         shouldRemovePhoto -> null
 
                                         replacementPhotoUri != null -> {
-                                            val photoDirectory = java.io.File(
+                                            val photoDirectory = File(
                                                 filesDir,
                                                 "item_photos"
                                             )
@@ -455,7 +455,7 @@ class MainActivity : ComponentActivity() {
                                                 else -> ".jpg"
                                             }
 
-                                            val photoFile = java.io.File(
+                                            val photoFile = File(
                                                 photoDirectory,
                                                 "item_${System.currentTimeMillis()}$extension"
                                             )
@@ -1227,13 +1227,13 @@ fun HomeScreen(
                         // ITEM PHOTO THUMBNAIL
                         if (!item.photoPath.isNullOrBlank()) {
 
-                            androidx.compose.foundation.Image(
+                            Image(
                                 painter = rememberAsyncImagePainter(item.photoPath),
                                 contentDescription = "Photo of ${item.name}",
                                 modifier = Modifier
                                     .height(90.dp)
                                     .fillMaxWidth(0.28f),
-                                contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                                contentScale = ContentScale.Crop
                             )
 
                             Spacer(
@@ -1426,18 +1426,15 @@ fun HomeScreen(
 fun AddItemScreen(
     modifier: Modifier = Modifier,
     onPickPhoto: () -> Unit,
-    photoUri: android.net.Uri?,
+    photoUri: Uri?,
     onSave: (Item) -> Unit,
     onCancel: () -> Unit
 ) {
 
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
 
     var isImportant by remember {
         mutableStateOf(false)
-    }
-    var selectedPhotoUri by remember {
-        mutableStateOf<android.net.Uri?>(null)
     }
     var name by remember {
         mutableStateOf("")
@@ -1554,13 +1551,13 @@ fun AddItemScreen(
         if (photoUri != null) {
             Spacer(modifier = Modifier.height(12.dp))
 
-            androidx.compose.foundation.Image(
+            Image(
                 painter = rememberAsyncImagePainter(photoUri),
                 contentDescription = "Selected item photo",
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(220.dp),
-                contentScale = androidx.compose.ui.layout.ContentScale.Fit
+                contentScale = ContentScale.Fit
             )
         }
 
@@ -1587,11 +1584,11 @@ fun AddItemScreen(
 
                 try {
                     speechLauncher.launch(intent)
-                } catch (e: android.content.ActivityNotFoundException) {
-                    android.widget.Toast.makeText(
+                } catch (e: ActivityNotFoundException) {
+                    Toast.makeText(
                         context,
                         "Speech recognition is not available on this device.",
-                        android.widget.Toast.LENGTH_LONG
+                        Toast.LENGTH_LONG
                     ).show()
                 }
             },
@@ -1913,13 +1910,13 @@ fun ItemDetailsScreen(
                 modifier = Modifier.height(16.dp)
             )
 
-            androidx.compose.foundation.Image(
+            Image(
                 painter = rememberAsyncImagePainter(item.photoPath),
                 contentDescription = "Photo of ${item.name}",
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(240.dp),
-                contentScale = androidx.compose.ui.layout.ContentScale.Fit
+                contentScale = ContentScale.Fit
             )
 
             Spacer(
@@ -2137,9 +2134,9 @@ fun ItemDetailsScreen(
 fun EditItemScreen(
     modifier: Modifier = Modifier,
     item: Item,
-    photoUri: android.net.Uri?,
+    photoUri: Uri?,
     onPickPhoto: () -> Unit,
-    onSave: (Item, android.net.Uri?, Boolean) -> Unit,
+    onSave: (Item, Uri?, Boolean) -> Unit,
     onCancel: () -> Unit
 ) {
 
@@ -2153,7 +2150,7 @@ fun EditItemScreen(
     }
 
     var newPhotoUri by remember(item.id) {
-        mutableStateOf<android.net.Uri?>(null)
+        mutableStateOf<Uri?>(null)
     }
 
     var removePhoto by remember(item.id) {
@@ -2237,24 +2234,24 @@ fun EditItemScreen(
         )
 
         if (!removePhoto && photoUri == null && !editedPhotoPath.isNullOrBlank()) {
-            androidx.compose.foundation.Image(
+            Image(
                 painter = rememberAsyncImagePainter(editedPhotoPath),
                 contentDescription = "Current photo of ${item.name}",
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(200.dp),
-                contentScale = androidx.compose.ui.layout.ContentScale.Fit
+                contentScale = ContentScale.Fit
             )
         }
 
         if (!removePhoto && photoUri != null) {
-            androidx.compose.foundation.Image(
+            Image(
                 painter = rememberAsyncImagePainter(photoUri),
                 contentDescription = "Replacement photo of ${item.name}",
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(200.dp),
-                contentScale = androidx.compose.ui.layout.ContentScale.Fit
+                contentScale = ContentScale.Fit
             )
         }
 

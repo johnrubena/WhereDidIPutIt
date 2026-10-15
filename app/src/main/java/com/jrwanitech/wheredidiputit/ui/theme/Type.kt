@@ -1,4 +1,4 @@
-package com.example.wheredidiputit.ui.theme
+package com.jrwanitech.wheredidiputit.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle

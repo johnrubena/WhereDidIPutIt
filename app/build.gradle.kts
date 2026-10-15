@@ -5,14 +5,14 @@ plugins {
 }
 
 android {
-    namespace = "com.example.wheredidiputit"
+    namespace = "com.jrwanitech.wheredidiputit"
 
     compileSdk {
         version = release(37)
     }
 
     defaultConfig {
-        applicationId = "com.example.wheredidiputit"
+        applicationId = "com.jrwanitech.wheredidiputit"
 
         minSdk = 24
         targetSdk = 37

@@ -1,4 +1,4 @@
-package com.example.wheredidiputit
+package com.jrwanitech.wheredidiputit
 
 import org.junit.Test
 

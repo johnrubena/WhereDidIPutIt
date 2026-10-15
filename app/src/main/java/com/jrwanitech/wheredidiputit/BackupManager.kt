@@ -1,5 +1,5 @@
 
-package com.example.wheredidiputit
+package com.jrwanitech.wheredidiputit
 
 import android.content.Context
 import org.json.JSONArray

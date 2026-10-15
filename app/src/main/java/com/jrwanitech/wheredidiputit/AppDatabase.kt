@@ -1,4 +1,4 @@
-package com.example.wheredidiputit
+package com.jrwanitech.wheredidiputit
 
 import android.content.Context
 import androidx.room.Database
@@ -28,7 +28,6 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "where_did_i_put_it_database"
                 )
-                    .fallbackToDestructiveMigration()
                     .build()
 
                 INSTANCE = instance

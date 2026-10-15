@@ -1,4 +1,4 @@
-package com.example.wheredidiputit
+package com.jrwanitech.wheredidiputit
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
