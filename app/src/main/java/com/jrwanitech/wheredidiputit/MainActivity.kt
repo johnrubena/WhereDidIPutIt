@@ -24,6 +24,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -733,13 +738,6 @@ fun HomeScreen(
     }
 
     /*
-     * CATEGORY MENU
-     */
-    var categoryMenuExpanded by remember {
-        mutableStateOf(false)
-    }
-
-    /*
      * CATEGORY OPTIONS
      */
     val categories = listOf(
@@ -815,15 +813,22 @@ fun HomeScreen(
     ) {
 
         /*
-         * APP HEADER
-         */
+ * APP HEADER
+ */
         Text(
             text = "Where Did I Put It?",
-            fontSize = 30.sp
+            style = MaterialTheme.typography.headlineLarge,
+            color = MaterialTheme.colorScheme.primary
         )
 
         Spacer(
             modifier = Modifier.height(8.dp)
+        )
+
+        Text(
+            text = "Your belongings, always within reach.",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
         Text(
@@ -844,7 +849,7 @@ fun HomeScreen(
         /*
          * SEARCH
          */
-        TextField(
+        OutlinedTextField(
             value = searchText,
             onValueChange = onSearchTextChange,
             modifier = Modifier.fillMaxWidth(),
@@ -854,11 +859,11 @@ fun HomeScreen(
             placeholder = {
                 Text("e.g. keys, passport, charger")
             },
-            singleLine = true,
+            leadingIcon = {
+                Text("🔍")
+            },
             trailingIcon = {
-
                 if (searchText.isNotEmpty()) {
-
                     Button(
                         onClick = {
                             onSearchTextChange("")
@@ -866,11 +871,12 @@ fun HomeScreen(
                             importantOnly = false
                         }
                     ) {
-
                         Text("CLEAR")
                     }
                 }
-            }
+            },
+            singleLine = true,
+            shape = RoundedCornerShape(16.dp)
         )
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -953,69 +959,73 @@ fun HomeScreen(
             modifier = Modifier.height(8.dp)
         )
 
+
         /*
-         * CATEGORY FILTER DROPDOWN
+         * COMPACT CATEGORY AND IMPORTANT FILTERS
          */
-        Box(
-            modifier = Modifier.fillMaxWidth()
-        ) {
 
-            Button(
-                onClick = {
-                    categoryMenuExpanded = !categoryMenuExpanded
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-
-                Text("Category: $selectedCategory")
-            }
-
-            DropdownMenu(
-                expanded = categoryMenuExpanded,
-                onDismissRequest = {
-                    categoryMenuExpanded = false
-                }
-            ) {
-
-                categories.forEach { categoryOption ->
-
-                    DropdownMenuItem(
-                        text = {
-                            Text(categoryOption)
-                        },
-                        onClick = {
-
-                            selectedCategory = categoryOption
-                            categoryMenuExpanded = false
-                        }
-                    )
-                }
-            }
-        }
-
-        Spacer(
-            modifier = Modifier.height(8.dp)
-        )
-
-        Button(
-            onClick = {
-                importantOnly = !importantOnly
-            },
+// Category heading and Important toggle
+        Row(
             modifier = Modifier.fillMaxWidth()
         ) {
 
             Text(
-                if (importantOnly) {
-                    "⭐ Showing Important Items"
-                } else {
-                    "⭐ Show Important Only"
+                text = "Category",
+                fontSize = 15.sp,
+                modifier = Modifier.padding(top = 10.dp)
+            )
+
+            Spacer(
+                modifier = Modifier.weight(1f)
+            )
+
+            FilterChip(
+                selected = importantOnly,
+                onClick = {
+                    importantOnly = !importantOnly
+                },
+                label = {
+                    Text(
+                        if (importantOnly) {
+                            "⭐ Important"
+                        } else {
+                            "☆ Important"
+                        }
+                    )
                 }
             )
         }
 
         Spacer(
-            modifier = Modifier.height(16.dp)
+            modifier = Modifier.height(4.dp)
         )
+
+// Horizontally scrollable category chips
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+        ) {
+
+            categories.forEach { categoryOption ->
+
+                FilterChip(
+                    selected = selectedCategory == categoryOption,
+                    onClick = {
+                        selectedCategory = categoryOption
+                    },
+                    label = {
+                        Text(categoryOption)
+                    },
+                    modifier = Modifier.padding(end = 8.dp)
+                )
+            }
+        }
+
+        Spacer(
+            modifier = Modifier.height(12.dp)
+        )
+
 
         /*
          * SEARCH RESULTS COUNT
