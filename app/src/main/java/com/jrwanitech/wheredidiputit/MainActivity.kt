@@ -1152,12 +1152,13 @@ fun HomeScreen(
 
                     Button(
                         onClick = {
-                                onSearchTextChange("")
+                            onSearchTextChange("")
+                            selectedCategory = "All"
+                            importantOnly = false
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-
-                        Text("CLEAR SEARCH")
+                        Text("CLEAR SEARCH & FILTERS")
                     }
                 }
 
@@ -1189,10 +1190,18 @@ fun HomeScreen(
                 )
 
                 Text(
-                    text = if (selectedCategory != "All") {
-                        "No items found in the \"$selectedCategory\" category."
-                    } else {
-                        "No items match your search."
+                    text = when {
+                        importantOnly && selectedCategory != "All" ->
+                            "No important items found in the \"$selectedCategory\" category."
+
+                        importantOnly ->
+                            "You haven't marked any items as important yet."
+
+                        selectedCategory != "All" ->
+                            "No items found in the \"$selectedCategory\" category."
+
+                        else ->
+                            "No items match your search."
                     },
                     fontSize = 16.sp
                 )
