@@ -1876,6 +1876,7 @@ fun AddItemScreen(
  * ------------------------------------------------------------
  */
 
+
 @Composable
 fun ItemDetailsScreen(
     modifier: Modifier = Modifier,
@@ -1894,253 +1895,264 @@ fun ItemDetailsScreen(
             .padding(20.dp)
     ) {
 
-        /*
-         * SCREEN TITLE
-         */
+        // SCREEN HEADER
         Text(
             text = "Item Details",
-            fontSize = 28.sp
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.primary
         )
 
-        Spacer(
-            modifier = Modifier.height(6.dp)
-        )
+        Spacer(modifier = Modifier.height(6.dp))
 
         Text(
             text = "Here is where you put this item.",
-            fontSize = 15.sp
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
-        Spacer(
-            modifier = Modifier.height(16.dp)
-        )
+        Spacer(modifier = Modifier.height(20.dp))
 
-        /*
-         * ITEM NAME
-         */
-        Text(
-            text = "${getCategoryIcon(item.category)}  ${item.name}",
-            fontSize = 24.sp
-        )
+        // ITEM HEADER CARD
+        Card(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp)
+            ) {
 
+                Text(
+                    text = "${getCategoryIcon(item.category)}  ${item.name}",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
 
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = item.category,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                if (item.isImportant) {
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text(
+                        text = "⭐ IMPORTANT ITEM",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        }
+
+        // ITEM PHOTO
         if (!item.photoPath.isNullOrBlank()) {
-            Spacer(
-                modifier = Modifier.height(16.dp)
-            )
 
-            Image(
-                painter = rememberAsyncImagePainter(item.photoPath),
-                contentDescription = "Photo of ${item.name}",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(240.dp),
-                contentScale = ContentScale.Fit
-            )
+            Spacer(modifier = Modifier.height(16.dp))
 
-            Spacer(
-                modifier = Modifier.height(16.dp)
-            )
+            Card(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Image(
+                    painter = rememberAsyncImagePainter(item.photoPath),
+                    contentDescription = "Photo of ${item.name}",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(240.dp),
+                    contentScale = ContentScale.Fit
+                )
+            }
         }
 
+        Spacer(modifier = Modifier.height(20.dp))
 
-        if (item.isImportant) {
+        // ITEM INFORMATION
+        Text(
+            text = "Where to Find It",
+            style = MaterialTheme.typography.titleLarge
+        )
 
-            Spacer(
-                modifier = Modifier.height(8.dp)
-            )
+        Spacer(modifier = Modifier.height(12.dp))
 
-            Text(
-                text = "⭐ Important Item",
-                fontSize = 16.sp
-            )
+        Card(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp)
+            ) {
+
+                // LOCATION
+                Text(
+                    text = "📍 Location",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = item.location.ifBlank { "Not specified" },
+                    style = MaterialTheme.typography.bodyLarge
+                )
+
+                // SPECIFIC PLACE
+                if (item.specificPlace.isNotBlank()) {
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    HorizontalDivider()
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = "📌 Specific Place",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Text(
+                        text = item.specificPlace,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
+
+                // CONTAINER
+                if (item.container.isNotBlank()) {
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    HorizontalDivider()
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = "📦 Container",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Text(
+                        text = item.container,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
+
+                // NOTES
+                if (item.notes.isNotBlank()) {
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    HorizontalDivider()
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = "📝 Notes",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Text(
+                        text = item.notes,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
+            }
         }
 
-        Spacer(
-            modifier = Modifier.height(8.dp)
-        )
+        Spacer(modifier = Modifier.height(20.dp))
 
-        /*
-         * CATEGORY
-         */
+        // ITEM HISTORY
         Text(
-            text = "Category",
-            fontSize = 13.sp
+            text = "Item History",
+            style = MaterialTheme.typography.titleLarge
         )
 
-        Text(
-            text = item.category,
-            fontSize = 18.sp
-        )
+        Spacer(modifier = Modifier.height(12.dp))
 
-        Spacer(
-            modifier = Modifier.height(20.dp)
-        )
+        Card(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp)
+            ) {
 
-        /*
-         * LOCATION
-         */
-        Text(
-            text = "Location",
-            fontSize = 13.sp
-        )
+                Text(
+                    text = "Added",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
 
-        Text(
-            text = if (item.location.isBlank()) {
-                "Not specified"
-            } else {
-                item.location
-            },
-            fontSize = 18.sp
-        )
+                Spacer(modifier = Modifier.height(4.dp))
 
-        /*
-         * SPECIFIC PLACE
-         */
-        if (item.specificPlace.isNotBlank()) {
+                Text(
+                    text = formatItemDate(item.createdAt),
+                    style = MaterialTheme.typography.bodyLarge
+                )
 
-            Spacer(
-                modifier = Modifier.height(16.dp)
-            )
+                Spacer(modifier = Modifier.height(16.dp))
 
-            Text(
-                text = "Specific place",
-                fontSize = 13.sp
-            )
+                HorizontalDivider()
 
-            Text(
-                text = item.specificPlace,
-                fontSize = 18.sp
-            )
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "Last Updated",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = formatUpdatedDate(item.updatedAt),
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
         }
 
-        /*
-         * CONTAINER
-         */
-        if (item.container.isNotBlank()) {
+        Spacer(modifier = Modifier.height(24.dp))
 
-            Spacer(
-                modifier = Modifier.height(16.dp)
-            )
-
-            Text(
-                text = "Container",
-                fontSize = 13.sp
-            )
-
-            Text(
-                text = item.container,
-                fontSize = 18.sp
-            )
-        }
-
-        /*
-         * NOTES
-         */
-        if (item.notes.isNotBlank()) {
-
-            Spacer(
-                modifier = Modifier.height(16.dp)
-            )
-
-            Text(
-                text = "Notes",
-                fontSize = 13.sp
-            )
-
-            Text(
-                text = item.notes,
-                fontSize = 18.sp
-            )
-        }
-
-        /*
-         * ADDED DATE
-         */
-        /*
- * ADDED DATE
- */
-        Spacer(
-            modifier = Modifier.height(16.dp)
-        )
-
-        Text(
-            text = "Added",
-            fontSize = 13.sp
-        )
-
-        Text(
-            text = formatItemDate(item.createdAt),
-            fontSize = 18.sp
-        )
-
-        /*
-         * LAST UPDATED DATE
-         */
-        Spacer(
-            modifier = Modifier.height(16.dp)
-        )
-
-        Text(
-            text = "Last Updated",
-            fontSize = 13.sp
-        )
-
-        Text(
-            text = formatUpdatedDate(item.updatedAt),
-            fontSize = 18.sp
-        )
-
-        Spacer(
-            modifier = Modifier.height(30.dp)
-        )
-
-        /*
-         * EDIT BUTTON
-         */
+        // EDIT BUTTON
         Button(
             onClick = onEdit,
             modifier = Modifier.fillMaxWidth()
         ) {
-
-            Text("EDIT ITEM")
+            Text("✏️ EDIT ITEM")
         }
 
-        Spacer(
-            modifier = Modifier.height(12.dp)
-        )
+        Spacer(modifier = Modifier.height(12.dp))
 
-        /*
-         * DELETE BUTTON
-         */
+        // DELETE BUTTON
         Button(
             onClick = onDelete,
             modifier = Modifier.fillMaxWidth()
         ) {
-
-            Text("DELETE ITEM")
+            Text("🗑 DELETE ITEM")
         }
 
-        Spacer(
-            modifier = Modifier.height(12.dp)
-        )
+        Spacer(modifier = Modifier.height(12.dp))
 
-        /*
-         * BACK BUTTON
-         */
+        // BACK BUTTON
         Button(
             onClick = onBack,
             modifier = Modifier.fillMaxWidth()
         ) {
-
-            Text("BACK")
+            Text("← BACK")
         }
 
-        Spacer(
-            modifier = Modifier.height(24.dp)
-        )
+        Spacer(modifier = Modifier.height(24.dp))
     }
 }
+
 
 
 /*
