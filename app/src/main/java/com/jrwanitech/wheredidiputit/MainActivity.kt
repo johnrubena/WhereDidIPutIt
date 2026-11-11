@@ -50,6 +50,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.Alignment
 import coil.compose.rememberAsyncImagePainter
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
@@ -1441,6 +1442,7 @@ fun HomeScreen(
  * ------------------------------------------------------------
  */
 
+
 @Composable
 fun AddItemScreen(
     modifier: Modifier = Modifier,
@@ -1449,42 +1451,28 @@ fun AddItemScreen(
     onSave: (Item) -> Unit,
     onCancel: () -> Unit
 ) {
-
     val context = LocalContext.current
 
-    var isImportant by remember {
-        mutableStateOf(false)
-    }
-    var name by remember {
-        mutableStateOf("")
-    }
-
-    var location by remember {
-        mutableStateOf("")
-    }
-
-    var specificPlace by remember {
-        mutableStateOf("")
-    }
-
+    var isImportant by remember { mutableStateOf(false) }
+    var name by remember { mutableStateOf("") }
+    var location by remember { mutableStateOf("") }
+    var specificPlace by remember { mutableStateOf("") }
     var voiceTranscript by remember { mutableStateOf("") }
+    var container by remember { mutableStateOf("") }
+    var notes by remember { mutableStateOf("") }
+    var category by remember { mutableStateOf("Other") }
+    var nameError by remember { mutableStateOf(false) }
+    var categoryExpanded by remember { mutableStateOf(false) }
 
-    var container by remember {
-        mutableStateOf("")
-    }
-
-    var notes by remember {
-        mutableStateOf("")
-    }
-
-    var category by remember {
-        mutableStateOf("Other")
-    }
-
-    var nameError by remember {
-        mutableStateOf(false)
-    }
-
+    val categories = listOf(
+        "Documents",
+        "Keys",
+        "Electronics",
+        "Clothing",
+        "Tools",
+        "Household",
+        "Other"
+    )
 
     val speechLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -1509,20 +1497,6 @@ fun AddItemScreen(
         }
     }
 
-    var categoryExpanded by remember {
-        mutableStateOf(false)
-    }
-
-    val categories = listOf(
-        "Documents",
-        "Keys",
-        "Electronics",
-        "Clothing",
-        "Tools",
-        "Household",
-        "Other"
-    )
-
     val scrollState = rememberScrollState()
 
     Column(
@@ -1532,303 +1506,364 @@ fun AddItemScreen(
             .padding(20.dp)
     ) {
 
-        /*
-         * SCREEN TITLE
-         */
+        // SCREEN HEADER
         Text(
-            text = "Add Item",
-            fontSize = 28.sp
+            text = "Add New Item",
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.primary
         )
 
         Spacer(modifier = Modifier.height(6.dp))
 
         Text(
-            text = "Remember where you put your things.",
-            fontSize = 16.sp
+            text = "Keep track of your belongings and find them easily later.",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
-
-        Text(
-            text = "Add a few details below so you can find this item quickly later.",
-            fontSize = 14.sp
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        // CHOOSE ITEM PHOTO
-        // CHOOSE ITEM PHOTO
-        Button(
-            onClick = onPickPhoto,
+        // PHOTO SECTION
+        Card(
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("📷 CHOOSE ITEM PHOTO")
-        }
-
-
-        if (photoUri != null) {
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Image(
-                painter = rememberAsyncImagePainter(photoUri),
-                contentDescription = "Selected item photo",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(220.dp),
-                contentScale = ContentScale.Fit
-            )
-        }
-
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-
-        Button(
-            onClick = {
-                val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                    putExtra(
-                        RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-                        RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
-                    )
-                    putExtra(
-                        RecognizerIntent.EXTRA_LANGUAGE,
-                        Locale.getDefault().toLanguageTag()
-                    )
-                    putExtra(
-                        RecognizerIntent.EXTRA_PROMPT,
-                        "Say the name of your item"
-                    )
-                }
-
-                try {
-                    speechLauncher.launch(intent)
-                } catch (e: ActivityNotFoundException) {
-                    Toast.makeText(
-                        context,
-                        "Speech recognition is not available on this device.",
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("🎤 ENTER ITEM BY VOICE")
-        }
-
-
-        /*
-         * ITEM NAME
-         */
-        TextField(
-            value = name,
-            onValueChange = {
-                name = it
-                nameError = false
-            },
-            modifier = Modifier.fillMaxWidth(),
-            label = {
-                Text("What is the item?")
-            },
-            placeholder = {
-                Text("e.g. Passport, house keys, laptop charger")
-            },
-            isError = nameError
-        )
-
-        if (nameError) {
-
-            Text(
-                text = "Item name is required.",
-                fontSize = 13.sp
-            )
-        }
-
-        Spacer(
-            modifier = Modifier.height(16.dp)
-        )
-
-        /*
-         * CATEGORY
-         */
-        Text(
-            text = "What type of item is this?",
-            fontSize = 13.sp
-        )
-
-        Spacer(
-            modifier = Modifier.height(4.dp)
-        )
-
-        Box(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-
-            Button(
-                onClick = {
-                    categoryExpanded = !categoryExpanded
-                },
-                modifier = Modifier.fillMaxWidth()
+            Column(
+                modifier = Modifier.padding(16.dp)
             ) {
+                Text(
+                    text = "📷 Item Photo",
+                    style = MaterialTheme.typography.titleMedium
+                )
 
-                Text(category)
-            }
+                Spacer(modifier = Modifier.height(6.dp))
 
-            DropdownMenu(
-                expanded = categoryExpanded,
-                onDismissRequest = {
-                    categoryExpanded = false
+                Text(
+                    text = "Add a photo to help you recognize this item.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                if (photoUri != null) {
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Image(
+                        painter = rememberAsyncImagePainter(photoUri),
+                        contentDescription = "Selected item photo",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(220.dp),
+                        contentScale = ContentScale.Fit
+                    )
                 }
-            ) {
 
-                categories.forEach { categoryOption ->
+                Spacer(modifier = Modifier.height(12.dp))
 
-                    DropdownMenuItem(
-                        text = {
-                            Text(categoryOption)
-                        },
-                        onClick = {
-
-                            category = categoryOption
-                            categoryExpanded = false
+                Button(
+                    onClick = onPickPhoto,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        if (photoUri == null) {
+                            "CHOOSE ITEM PHOTO"
+                        } else {
+                            "CHANGE ITEM PHOTO"
                         }
                     )
                 }
             }
         }
-        /*
- * IMPORTANT ITEM
- */
-        Row(
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // SMART VOICE ENTRY
+        Card(
             modifier = Modifier.fillMaxWidth()
         ) {
+            Column(
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Text(
+                    text = "🎤 Smart Voice Entry",
+                    style = MaterialTheme.typography.titleMedium
+                )
 
-            Checkbox(
-                checked = isImportant,
-                onCheckedChange = {
-                    isImportant = it
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Text(
+                    text = "Describe your item and where you keep it. We'll fill in the details for you.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Button(
+                    onClick = {
+                        val intent = Intent(
+                            RecognizerIntent.ACTION_RECOGNIZE_SPEECH
+                        ).apply {
+                            putExtra(
+                                RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
+                            )
+                            putExtra(
+                                RecognizerIntent.EXTRA_LANGUAGE,
+                                Locale.getDefault().toLanguageTag()
+                            )
+                            putExtra(
+                                RecognizerIntent.EXTRA_PROMPT,
+                                "Describe your item and where you put it"
+                            )
+                        }
+
+                        try {
+                            speechLauncher.launch(intent)
+                        } catch (e: ActivityNotFoundException) {
+                            Toast.makeText(
+                                context,
+                                "Speech recognition is not available on this device.",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("ENTER ITEM BY VOICE")
                 }
-            )
 
-            Text(
-                text = "⭐ Mark as Important",
-                modifier = Modifier.padding(top = 12.dp)
-            )
+                if (voiceTranscript.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "Recognized speech: $voiceTranscript",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
 
-        Spacer(
-            modifier = Modifier.height(8.dp)
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // ITEM INFORMATION
+        Text(
+            text = "Item Information",
+            style = MaterialTheme.typography.titleLarge
         )
 
-        Spacer(
-            modifier = Modifier.height(16.dp)
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Card(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp)
+            ) {
+                TextField(
+                    value = name,
+                    onValueChange = {
+                        name = it
+                        nameError = false
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = {
+                        Text("Item name")
+                    },
+                    placeholder = {
+                        Text("e.g. Passport, house keys, laptop charger")
+                    },
+                    isError = nameError,
+                    singleLine = true
+                )
+
+                if (nameError) {
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Text(
+                        text = "Item name is required.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "Category",
+                    style = MaterialTheme.typography.titleSmall
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Box(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Button(
+                        onClick = {
+                            categoryExpanded = !categoryExpanded
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("CATEGORY: $category")
+                    }
+
+                    DropdownMenu(
+                        expanded = categoryExpanded,
+                        onDismissRequest = {
+                            categoryExpanded = false
+                        }
+                    ) {
+                        categories.forEach { categoryOption ->
+                            DropdownMenuItem(
+                                text = {
+                                    Text(categoryOption)
+                                },
+                                onClick = {
+                                    category = categoryOption
+                                    categoryExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(
+                        checked = isImportant,
+                        onCheckedChange = {
+                            isImportant = it
+                        }
+                    )
+
+                    Text(
+                        text = "⭐ Mark as Important",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // LOCATION INFORMATION
+        Text(
+            text = "Where to Find It",
+            style = MaterialTheme.typography.titleLarge
         )
 
-        /*
-         * LOCATION
-         */
-        TextField(
-            value = location,
-            onValueChange = {
-                location = it
-            },
-            modifier = Modifier.fillMaxWidth(),
-            label = {
-                Text("Where is it?")
-            },
-            placeholder = {
-                Text("e.g. Kitchen, bedroom, garage")
-            },
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Card(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp)
+            ) {
+                TextField(
+                    value = location,
+                    onValueChange = {
+                        location = it
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = {
+                        Text("General location")
+                    },
+                    placeholder = {
+                        Text("e.g. Kitchen, bedroom, garage")
+                    },
+                    singleLine = true
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                TextField(
+                    value = specificPlace,
+                    onValueChange = {
+                        specificPlace = it
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = {
+                        Text("Exact spot")
+                    },
+                    placeholder = {
+                        Text("e.g. top drawer, left shelf")
+                    },
+                    singleLine = true
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                TextField(
+                    value = container,
+                    onValueChange = {
+                        container = it
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = {
+                        Text("Storage container")
+                    },
+                    placeholder = {
+                        Text("e.g. blue box, drawer, backpack")
+                    },
+                    singleLine = true
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // NOTES
+        Text(
+            text = "Additional Notes",
+            style = MaterialTheme.typography.titleLarge
         )
 
-        Spacer(
-            modifier = Modifier.height(16.dp)
-        )
+        Spacer(modifier = Modifier.height(8.dp))
 
-        /*
-         * SPECIFIC PLACE
-         */
-        TextField(
-            value = specificPlace,
-            onValueChange = {
-                specificPlace = it
-            },
-            modifier = Modifier.fillMaxWidth(),
-            label = {
-                Text("Exact spot")
-            },
-            placeholder = {
-                Text("e.g. top drawer, left shelf, bedside table")
-            },
-        )
+        Card(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp)
+            ) {
+                TextField(
+                    value = notes,
+                    onValueChange = {
+                        notes = it
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = {
+                        Text("Notes")
+                    },
+                    placeholder = {
+                        Text("Add important details or reminders...")
+                    },
+                    minLines = 4
+                )
+            }
+        }
 
-        Spacer(
-            modifier = Modifier.height(16.dp)
-        )
+        Spacer(modifier = Modifier.height(20.dp))
 
-        /*
-         * CONTAINER
-         */
-        TextField(
-            value = container,
-            onValueChange = {
-                container = it
-            },
-            modifier = Modifier.fillMaxWidth(),
-            label = {
-                Text("What is it stored in?")
-            },
-            placeholder = {
-                Text("e.g. blue box, drawer, backpack")
-            },
-        )
-
-        Spacer(
-            modifier = Modifier.height(16.dp)
-        )
-
-        /*
-         * NOTES
-         */
-        TextField(
-            value = notes,
-            onValueChange = {
-                notes = it
-            },
-            modifier = Modifier.fillMaxWidth(),
-            label = {
-                Text("Notes")
-            },
-            placeholder = {
-                Text("e.g. important details or reminders")
-            },
-            minLines = 4
-        )
-
-        Spacer(
-            modifier = Modifier.height(24.dp)
-        )
-
-        /*
-         * SAVE ITEM
-         */
         Text(
             text = "You can edit or delete this item later.",
-            fontSize = 13.sp
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
-        Spacer(
-            modifier = Modifier.height(8.dp)
-        )
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // SAVE ITEM
         Button(
             onClick = {
-
                 if (name.isBlank()) {
-
                     nameError = true
-
                 } else {
-
                     val newItem = Item(
                         name = name.trim(),
                         location = location.trim(),
@@ -1844,30 +1879,23 @@ fun AddItemScreen(
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-
             Text("SAVE ITEM")
         }
 
-        Spacer(
-            modifier = Modifier.height(12.dp)
-        )
+        Spacer(modifier = Modifier.height(10.dp))
 
-        /*
-         * BACK TO HOME
-         */
+        // CANCEL
         Button(
             onClick = onCancel,
             modifier = Modifier.fillMaxWidth()
         ) {
-
             Text("BACK TO HOME")
         }
 
-        Spacer(
-            modifier = Modifier.height(24.dp)
-        )
+        Spacer(modifier = Modifier.height(24.dp))
     }
 }
+
 
 
 /*
@@ -2161,6 +2189,7 @@ fun ItemDetailsScreen(
  * ------------------------------------------------------------
  */
 
+
 @Composable
 fun EditItemScreen(
     modifier: Modifier = Modifier,
@@ -2170,55 +2199,17 @@ fun EditItemScreen(
     onSave: (Item, Uri?, Boolean) -> Unit,
     onCancel: () -> Unit
 ) {
-
-    var name by remember(item.id) {
-        mutableStateOf(item.name)
-    }
-
-
-    var editedPhotoPath by remember(item.id) {
-        mutableStateOf(item.photoPath)
-    }
-
-    var newPhotoUri by remember(item.id) {
-        mutableStateOf<Uri?>(null)
-    }
-
-    var removePhoto by remember(item.id) {
-        mutableStateOf(false)
-    }
-
-
-    var location by remember(item.id) {
-        mutableStateOf(item.location)
-    }
-
-    var specificPlace by remember(item.id) {
-        mutableStateOf(item.specificPlace)
-    }
-
-    var container by remember(item.id) {
-        mutableStateOf(item.container)
-    }
-
-    var notes by remember(item.id) {
-        mutableStateOf(item.notes)
-    }
-
-    var category by remember(item.id) {
-        mutableStateOf(item.category)
-    }
-    var isImportant by remember(item.id) {
-        mutableStateOf(item.isImportant)
-    }
-
-    var nameError by remember(item.id) {
-        mutableStateOf(false)
-    }
-
-    var categoryExpanded by remember(item.id) {
-        mutableStateOf(false)
-    }
+    var name by remember(item.id) { mutableStateOf(item.name) }
+    var editedPhotoPath by remember(item.id) { mutableStateOf(item.photoPath) }
+    var removePhoto by remember(item.id) { mutableStateOf(false) }
+    var location by remember(item.id) { mutableStateOf(item.location) }
+    var specificPlace by remember(item.id) { mutableStateOf(item.specificPlace) }
+    var container by remember(item.id) { mutableStateOf(item.container) }
+    var notes by remember(item.id) { mutableStateOf(item.notes) }
+    var category by remember(item.id) { mutableStateOf(item.category) }
+    var isImportant by remember(item.id) { mutableStateOf(item.isImportant) }
+    var nameError by remember(item.id) { mutableStateOf(false) }
+    var categoryExpanded by remember(item.id) { mutableStateOf(false) }
 
     val categories = listOf(
         "Documents",
@@ -2238,273 +2229,328 @@ fun EditItemScreen(
             .verticalScroll(scrollState)
             .padding(20.dp)
     ) {
-
-        /*
-         * SCREEN TITLE
-         */
+        // SCREEN HEADER
         Text(
             text = "Edit Item",
-            fontSize = 26.sp
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.primary
         )
 
-        Spacer(
-            modifier = Modifier.height(6.dp)
-        )
+        Spacer(modifier = Modifier.height(6.dp))
 
         Text(
-            text = "Update the information for this item.",
-            fontSize = 15.sp
+            text = "Update your item's details and storage location.",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
+        Spacer(modifier = Modifier.height(24.dp))
 
-        Spacer(modifier = Modifier.height(16.dp))
+        // PHOTO SECTION
+        Card(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Text(
+                    text = "📷 Item Photo",
+                    style = MaterialTheme.typography.titleMedium
+                )
 
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Text(
+                    text = "Keep a photo to help recognize this item.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                if (!removePhoto) {
+                    when {
+                        photoUri != null -> {
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            Image(
+                                painter = rememberAsyncImagePainter(photoUri),
+                                contentDescription = "New item photo",
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(220.dp),
+                                contentScale = ContentScale.Fit
+                            )
+                        }
+
+                        !editedPhotoPath.isNullOrBlank() -> {
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            Image(
+                                painter = rememberAsyncImagePainter(editedPhotoPath),
+                                contentDescription = "Current item photo",
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(220.dp),
+                                contentScale = ContentScale.Fit
+                            )
+                        }
+                    }
+                } else {
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text(
+                        text = "The current photo will be removed when you save.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Button(
+                    onClick = {
+                        removePhoto = false
+                        onPickPhoto()
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        if (photoUri != null || !editedPhotoPath.isNullOrBlank()) {
+                            "CHANGE ITEM PHOTO"
+                        } else {
+                            "CHOOSE ITEM PHOTO"
+                        }
+                    )
+                }
+
+                if (!editedPhotoPath.isNullOrBlank() || photoUri != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Button(
+                        onClick = {
+                            removePhoto = true
+                            editedPhotoPath = null
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("REMOVE PHOTO")
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // ITEM INFORMATION
         Text(
-            text = "Item Photo",
-            fontSize = 18.sp
+            text = "Item Information",
+            style = MaterialTheme.typography.titleLarge
         )
-
-        if (!removePhoto && photoUri == null && !editedPhotoPath.isNullOrBlank()) {
-            Image(
-                painter = rememberAsyncImagePainter(editedPhotoPath),
-                contentDescription = "Current photo of ${item.name}",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp),
-                contentScale = ContentScale.Fit
-            )
-        }
-
-        if (!removePhoto && photoUri != null) {
-            Image(
-                painter = rememberAsyncImagePainter(photoUri),
-                contentDescription = "Replacement photo of ${item.name}",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp),
-                contentScale = ContentScale.Fit
-            )
-        }
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        Button(
-            onClick = {
-                removePhoto = false
-                onPickPhoto()
-            },
+        Card(
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("CHOOSE OR REPLACE PHOTO")
-        }
-
-        if (!editedPhotoPath.isNullOrBlank() || photoUri != null) {
-            Button(
-                onClick = {
-                    removePhoto = true
-                    editedPhotoPath = null
-                    newPhotoUri = null
-                },
-                modifier = Modifier.fillMaxWidth()
+            Column(
+                modifier = Modifier.padding(16.dp)
             ) {
-                Text("REMOVE PHOTO")
-            }
-        }
+                TextField(
+                    value = name,
+                    onValueChange = {
+                        name = it
+                        nameError = false
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = {
+                        Text("Item name")
+                    },
+                    placeholder = {
+                        Text("e.g. Passport, house keys, laptop charger")
+                    },
+                    isError = nameError,
+                    singleLine = true
+                )
 
-        Spacer(
-            modifier = Modifier.height(16.dp)
-        )
+                if (nameError) {
+                    Spacer(modifier = Modifier.height(4.dp))
 
-        /*
-         * ITEM NAME
-         */
-        TextField(
-            value = name,
-            onValueChange = {
-                name = it
-                nameError = false
-            },
-            modifier = Modifier.fillMaxWidth(),
-            label = {
-                Text("Item name")
-            },
-            isError = nameError
-        )
-
-        if (nameError) {
-
-            Text(
-                text = "Item name is required.",
-                fontSize = 13.sp
-            )
-        }
-
-        Spacer(
-            modifier = Modifier.height(16.dp)
-        )
-
-        /*
-         * CATEGORY
-         */
-        Text(
-            text = "Category",
-            fontSize = 13.sp
-        )
-
-        Spacer(
-            modifier = Modifier.height(4.dp)
-        )
-
-        Box(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-
-            Button(
-                onClick = {
-                    categoryExpanded = !categoryExpanded
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-
-                Text(category)
-            }
-
-            DropdownMenu(
-                expanded = categoryExpanded,
-                onDismissRequest = {
-                    categoryExpanded = false
+                    Text(
+                        text = "Item name is required.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
                 }
-            ) {
 
-                categories.forEach { categoryOption ->
+                Spacer(modifier = Modifier.height(16.dp))
 
-                    DropdownMenuItem(
-                        text = {
-                            Text(categoryOption)
-                        },
+                Text(
+                    text = "Category",
+                    style = MaterialTheme.typography.titleSmall
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Box(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Button(
                         onClick = {
+                            categoryExpanded = !categoryExpanded
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("CATEGORY: $category")
+                    }
 
-                            category = categoryOption
+                    DropdownMenu(
+                        expanded = categoryExpanded,
+                        onDismissRequest = {
                             categoryExpanded = false
                         }
+                    ) {
+                        categories.forEach { categoryOption ->
+                            DropdownMenuItem(
+                                text = {
+                                    Text(categoryOption)
+                                },
+                                onClick = {
+                                    category = categoryOption
+                                    categoryExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(
+                        checked = isImportant,
+                        onCheckedChange = {
+                            isImportant = it
+                        }
+                    )
+
+                    Text(
+                        text = "⭐ Mark as Important",
+                        style = MaterialTheme.typography.bodyLarge
                     )
                 }
             }
         }
-        /*
-         * IMPORTANT ITEM
-         */
-        Row(
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // LOCATION INFORMATION
+        Text(
+            text = "Where to Find It",
+            style = MaterialTheme.typography.titleLarge
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Card(
             modifier = Modifier.fillMaxWidth()
         ) {
+            Column(
+                modifier = Modifier.padding(16.dp)
+            ) {
+                TextField(
+                    value = location,
+                    onValueChange = {
+                        location = it
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = {
+                        Text("General location")
+                    },
+                    placeholder = {
+                        Text("e.g. Kitchen, bedroom, garage")
+                    },
+                    singleLine = true
+                )
 
-            Checkbox(
-                checked = isImportant,
-                onCheckedChange = {
-                    isImportant = it
-                }
-            )
+                Spacer(modifier = Modifier.height(16.dp))
 
-            Text(
-                text = "⭐ Mark as Important",
-                modifier = Modifier.padding(top = 12.dp)
-            )
+                TextField(
+                    value = specificPlace,
+                    onValueChange = {
+                        specificPlace = it
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = {
+                        Text("Exact spot")
+                    },
+                    placeholder = {
+                        Text("e.g. top drawer, left shelf")
+                    },
+                    singleLine = true
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                TextField(
+                    value = container,
+                    onValueChange = {
+                        container = it
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = {
+                        Text("Storage container")
+                    },
+                    placeholder = {
+                        Text("e.g. blue box, drawer, backpack")
+                    },
+                    singleLine = true
+                )
+            }
         }
 
-        Spacer(
-            modifier = Modifier.height(8.dp)
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // ADDITIONAL NOTES
+        Text(
+            text = "Additional Notes",
+            style = MaterialTheme.typography.titleLarge
         )
 
-        Spacer(
-            modifier = Modifier.height(16.dp)
-        )
+        Spacer(modifier = Modifier.height(8.dp))
 
-        /*
-         * LOCATION
-         */
-        TextField(
-            value = location,
-            onValueChange = {
-                location = it
-            },
-            modifier = Modifier.fillMaxWidth(),
-            label = {
-                Text("Location")
+        Card(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp)
+            ) {
+                TextField(
+                    value = notes,
+                    onValueChange = {
+                        notes = it
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = {
+                        Text("Notes")
+                    },
+                    placeholder = {
+                        Text("Add important details or reminders...")
+                    },
+                    minLines = 4
+                )
             }
-        )
+        }
 
-        Spacer(
-            modifier = Modifier.height(16.dp)
-        )
+        Spacer(modifier = Modifier.height(20.dp))
 
-        /*
-         * SPECIFIC PLACE
-         */
-        TextField(
-            value = specificPlace,
-            onValueChange = {
-                specificPlace = it
-            },
-            modifier = Modifier.fillMaxWidth(),
-            label = {
-                Text("Specific place")
-            }
-        )
-
-        Spacer(
-            modifier = Modifier.height(16.dp)
-        )
-
-        /*
-         * CONTAINER
-         */
-        TextField(
-            value = container,
-            onValueChange = {
-                container = it
-            },
-            modifier = Modifier.fillMaxWidth(),
-            label = {
-                Text("Container")
-            }
-        )
-
-        Spacer(
-            modifier = Modifier.height(16.dp)
-        )
-
-        /*
-         * NOTES
-         */
-        TextField(
-            value = notes,
-            onValueChange = {
-                notes = it
-            },
-            modifier = Modifier.fillMaxWidth(),
-            label = {
-                Text("Notes")
-            },
-            minLines = 4
-        )
-
-        Spacer(
-            modifier = Modifier.height(24.dp)
-        )
-
-        /*
-         * SAVE CHANGES
-         */
+        // SAVE CHANGES
         Button(
             onClick = {
-
                 if (name.isBlank()) {
-
                     nameError = true
-
                 } else {
-
-
                     val updatedItem = item.copy(
                         name = name.trim(),
                         location = location.trim(),
@@ -2521,36 +2567,30 @@ fun EditItemScreen(
                         updatedAt = System.currentTimeMillis()
                     )
 
-
                     onSave(updatedItem, photoUri, removePhoto)
                 }
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-
             Text("SAVE CHANGES")
         }
 
-        Spacer(
-            modifier = Modifier.height(12.dp)
-        )
+        Spacer(modifier = Modifier.height(10.dp))
 
-        /*
-         * BACK TO DETAILS
-         */
+        // CANCEL
         Button(
             onClick = onCancel,
             modifier = Modifier.fillMaxWidth()
         ) {
-
-            Text("BACK TO DETAILS")
+            Text("CANCEL")
         }
 
-        Spacer(
-            modifier = Modifier.height(24.dp)
-        )
+        Spacer(modifier = Modifier.height(24.dp))
     }
 }
+
+
+
 @Composable
 fun AboutHelpScreen(
     modifier: Modifier = Modifier,
